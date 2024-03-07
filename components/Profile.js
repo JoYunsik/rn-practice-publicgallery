@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { getUser } from '../lib/users';
 import { getPosts } from '../lib/post';
 import Avatar from './Avatar';
+import PostGridItem from './PostGridITem';
+import usePosts from '../hooks/usePosts';
 
 const Profile = ({userId}) => {
     const [user, setUser] = useState(null);
-    const [posts, setPosts] = useState(null);
+    const { posts, noMorePost, refreshing, onLoadMore, onRefresh} = usePosts(userId)
+
+    const renderItem = ({item})=><PostGridItem post={item}/>
 
     useEffect(()=>{
-        getUser(userId).then(setUser);
-        getPosts(userId).then(setPosts);        
+        getUser(userId).then(setUser);     
     },[userId]);
     
     if(!user||!posts){
@@ -21,12 +24,28 @@ const Profile = ({userId}) => {
     return(
         <FlatList
             style={styles.block}
+            data={posts}
+            renderItem={renderItem}
+            numColumns={3}
+            keyExtractor={(item)=>item.id}
             ListHeaderComponent={
                 <View style={styles.userInfo}>
                     <Avatar source={user.photoURL && {uri: user.photoURL}} size={128}/>
                     <Text style={styles.username}>{user.displayName}</Text>
                 </View>
             }
+            onEndReached={onLoadMore}
+            onEndReachedThreshold={0.25}
+            ListFooterComponent={
+              !noMorePost && (
+                <ActivityIndicator
+                  style={styles.bottomSpinner}
+                  size={32}
+                  color='#6200ee'
+                />
+              )
+            }
+            refreshControl={<RefreshControl onRefresh={onRefresh} refreshing={refreshing}/>}
         />
     )
 }
